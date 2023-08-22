@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<ruleset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/squizlabs/php_codesniffer/phpcs.xsd">
+
+    <arg name="basepath" value="."/>
+    <arg name="cache" value=".phpcs-cache"/>
+    <arg name="colors"/>
+    <arg name="extensions" value="php"/>
+    <arg name="parallel" value="80"/>
+
+    <!-- Show progress -->
+    <arg value="p"/>
+
+    <!-- Paths to check -->
+    <file>./Adapter</file>
+    <file>./Expression</file>
+    <file>./Helper</file>
+    <file>./Native</file>
+    <file>./Node</file>
+    <file>./BaseExpression.php</file>
+    <file>./BaseNode.php</file>
+    <file>./Compiler.php</file>
+    <file>./Helper.php</file>
+    <file>./Lexer.php</file>
+    <file>./Loader.php</file>
+    <file>./Module.php</file>
+    <file>./NodeList.php</file>
+    <file>./Parser.php</file>
+    <file>./Renderer.php</file>
+    <file>./SyntaxErrorException.php</file>
+    <file>./Template.php</file>
+    <file>./Token.php</file>
+    <file>./TokenStream.php</file>
+
+    <!-- Include rules from the Qubus Coding Standard -->
+    <rule ref="QubusCodingStandard"/>
+</ruleset>

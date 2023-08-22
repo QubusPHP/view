@@ -1,0 +1,11 @@
+tests/templates/home.blade.php
+tests/templates/home.html
+tests/templates/layout.phtml
+tests/templates/test.phtml
+tests/cache/*.php
+vendor
+.idea
+.phpcs-cache
+.phpunit.result.cache
+composer.lock
+index.php

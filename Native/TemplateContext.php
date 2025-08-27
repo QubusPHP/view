@@ -124,7 +124,7 @@ final class TemplateContext
      * @param string $name The name of the block.
      * @throws ViewException
      */
-    public function block(string $name, callable $callback = null): void
+    public function block(string $name, ?callable $callback = null): void
     {
         if (null !== $callback) {
             $this->blocks[$name] = $this->getOutput($callback);
@@ -144,7 +144,7 @@ final class TemplateContext
      * @param string|null $functions Functions to run the string through.
      * @return string Escaped HTML output.
      */
-    public function esc(string $string, string $functions = null): string
+    public function esc(string $string, ?string $functions = null): string
     {
         if (null !== $functions) {
             $string = (string) $this->engine->batch($string, $functions);

@@ -10,24 +10,32 @@ use function is_int;
 
 final class Token
 {
-    private int $type;
-    private ?string $value;
-    private int $line;
-    private int $char;
+    public int $type {
+        get => $this->type;
+    }
+    public ?string $value {
+        get => $this->value;
+    }
+    public int $line {
+        get => $this->line;
+    }
+    public int $char {
+        get => $this->char;
+    }
 
-    public const EOF          = -1;
-    public const TEXT         = 0;
-    public const BLOCK_BEGIN  = 1;
-    public const OUTPUT_BEGIN = 2;
-    public const RAW_BEGIN    = 3;
-    public const BLOCK_END    = 4;
-    public const OUTPUT_END   = 5;
-    public const RAW_END      = 6;
-    public const NAME         = 7;
-    public const NUMBER       = 8;
-    public const STRING       = 9;
-    public const OPERATOR     = 10;
-    public const CONSTANT     = 11;
+    public const int EOF          = -1;
+    public const int TEXT         = 0;
+    public const int BLOCK_BEGIN  = 1;
+    public const int OUTPUT_BEGIN = 2;
+    public const int RAW_BEGIN    = 3;
+    public const int BLOCK_END    = 4;
+    public const int OUTPUT_END   = 5;
+    public const int RAW_END      = 6;
+    public const int NAME         = 7;
+    public const int NUMBER       = 8;
+    public const int STRING       = 9;
+    public const int OPERATOR     = 10;
+    public const int CONSTANT     = 11;
 
     public function __construct(int $type, ?string $value, int $line, int $char)
     {
@@ -103,28 +111,8 @@ final class Token
         );
     }
 
-    public function getType(): int
-    {
-        return $this->type;
-    }
-
-    public function getValue(): ?string
-    {
-        return $this->value;
-    }
-
-    public function getLine(): int
-    {
-        return $this->line;
-    }
-
-    public function getChar(): int
-    {
-        return $this->char;
-    }
-
     public function __toString(): string
     {
-        return $this->getValue();
+        return $this->value;
     }
 }

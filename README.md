@@ -4,7 +4,7 @@ Scaffold contains two templating engines to make it easier to use what you need 
 while the other is Scaffold:Compiler. Scaffold:Compiler is a fork of Flow from which Twig was born.
 
 ## Requirements
-* PHP 8.1+
+* PHP 8.4+
 
 ## Installation
 ```

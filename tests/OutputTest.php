@@ -6,6 +6,7 @@ namespace Qubus\Tests\View;
 
 use DirectoryIterator;
 use PHPUnit\Framework\Assert;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Qubus\Exception\Data\TypeException;
 use Qubus\View\Loader;
@@ -34,7 +35,7 @@ class OutputTest extends TestCase
         ]);
     }
 
-    public function outputProvider(): array
+    public static function outputProvider(): array
     {
         $paths = [];
 
@@ -58,9 +59,9 @@ class OutputTest extends TestCase
     }
 
     /**
-     * @dataProvider outputProvider
      * @throws TypeException
      */
+    #[DataProvider('outputProvider')]
     public function testOutput($actual, $expected)
     {
         $expected = file_get_contents($expected);

@@ -20,11 +20,11 @@ use function strtr;
 
 final class Loader implements Renderer
 {
-    public const VERSION = '1.0.0';
-    public const CLASS_PREFIX = '__ScaffoldTemplate_';
-    public const RECOMPILE_NEVER = -1;
-    public const RECOMPILE_NORMAL = 0;
-    public const RECOMPILE_ALWAYS = 1;
+    public const string VERSION = '3.0.0';
+    public const string CLASS_PREFIX = '__ScaffoldTemplate_';
+    public const int RECOMPILE_NEVER = -1;
+    public const int RECOMPILE_NORMAL = 0;
+    public const int RECOMPILE_ALWAYS = 1;
 
     private bool $exceptionHandler = true;
 

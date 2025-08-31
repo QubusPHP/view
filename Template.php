@@ -45,13 +45,19 @@ abstract class Template
     protected ?Template $parent = null;
 
     /** @var array $blocks */
-    protected array $blocks;
+    public array $blocks {
+        get => $this->blocks;
+    }
 
     /** @var array $macros */
-    protected array $macros;
+    public array $macros {
+        get => $this->macros;
+    }
 
     /** @var array $imports */
-    protected array $imports;
+    public array $imports {
+        get => $this->imports;
+    }
 
     /** @var array $stack */
     protected array $stack;
@@ -109,7 +115,7 @@ abstract class Template
     public function loadImport($template): array
     {
         try {
-            return $this->loader->load($this->getPath($template))->getMacros();
+            return $this->loader->load($this->getPath($template))->macros;
         } catch (Exception $e) {
             throw new RuntimeException(sprintf(
                 'error importing %s (%s) from %s line %d',
@@ -262,21 +268,6 @@ abstract class Template
     public function iterate($context, $seq): ContextIterator
     {
         return new ContextIterator($seq, $context['loop'] ?? null);
-    }
-
-    public function getBlocks(): array
-    {
-        return $this->blocks;
-    }
-
-    public function getMacros(): array
-    {
-        return $this->macros;
-    }
-
-    public function getImports(): array
-    {
-        return $this->imports;
     }
 
     public function getAttr($obj, $attr, $args = [])

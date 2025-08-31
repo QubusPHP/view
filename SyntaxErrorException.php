@@ -20,8 +20,8 @@ final class SyntaxErrorException extends Exception
     {
         $this->token = $token;
 
-        $line = $token->getLine();
-        $char = $token->getChar();
+        $line = $token->line;
+        $char = $token->char;
         parent::__construct(sprintf("$message in line %s char %d", $line, $char));
     }
 

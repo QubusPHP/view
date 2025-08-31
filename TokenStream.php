@@ -13,8 +13,13 @@ use function str_replace;
 
 final class TokenStream
 {
-    protected array $tokens;
-    protected Token $currentToken;
+    public array $tokens {
+        get => $this->tokens;
+    }
+    public Token $currentToken {
+        get => $this->currentToken;
+
+    }
     protected array $queue;
     protected int $cursor;
     protected bool $eos;
@@ -41,7 +46,7 @@ final class TokenStream
 
         $this->currentToken = $token;
 
-        $this->eos = $token->getType() === Token::EOF;
+        $this->eos = $token->type === Token::EOF;
 
         return $old;
     }
@@ -72,7 +77,7 @@ final class TokenStream
      */
     public function expect($primary, $secondary = null): Token
     {
-        $token = $this->getCurrentToken();
+        $token = $this->currentToken;
         if (null === $secondary && ! is_int($primary)) {
             $secondary = $primary;
             $primary = Token::NAME;
@@ -85,13 +90,13 @@ final class TokenStream
             } else {
                 $expecting = '"' . $secondary . '"';
             }
-            if ($token->getType() === Token::EOF) {
+            if ($token->type === Token::EOF) {
                 throw new SyntaxErrorException('unexpected end of file', $token);
             } else {
                 throw new SyntaxErrorException(
                     sprintf(
                         'unexpected "%s", expecting %s',
-                        str_replace("\n", '\n', $token->getValue()),
+                        str_replace("\n", '\n', $token->value),
                         $expecting
                     ),
                     $token
@@ -108,14 +113,14 @@ final class TokenStream
     public function expectTokens($tokens): TokenStream
     {
         foreach ($tokens as $token) {
-            $this->expect($token->getType(), $token->getValue());
+            $this->expect($token->type, $token->value);
         }
         return $this;
     }
 
     public function test($primary, $secondary = null): bool
     {
-        return $this->getCurrentToken()->test($primary, $secondary);
+        return $this->currentToken->test($primary, $secondary);
     }
 
     /**
@@ -134,15 +139,5 @@ final class TokenStream
     public function isEOS(): bool
     {
         return $this->eos;
-    }
-
-    public function getCurrentToken(): Token
-    {
-        return $this->currentToken;
-    }
-
-    public function getTokens(): array
-    {
-        return $this->tokens;
     }
 }

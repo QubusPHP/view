@@ -27,37 +27,37 @@ final class Lexer
     private int $end;
     private bool $trim;
 
-    public const BLOCK_BEGIN      = '{%';
-    public const BLOCK_BEGIN_TRIM = '{%-';
-    public const BLOCK_END        = '%}';
-    public const BLOCK_END_TRIM   = '-%}';
+    public const string BLOCK_BEGIN      = '{%';
+    public const string BLOCK_BEGIN_TRIM = '{%-';
+    public const string BLOCK_END        = '%}';
+    public const string BLOCK_END_TRIM   = '-%}';
 
-    public const COMMENT_BEGIN      = '{#';
-    public const COMMENT_BEGIN_TRIM = '{#-';
-    public const COMMENT_END        = '#}';
-    public const COMMENT_END_TRIM   = '-#}';
+    public const string COMMENT_BEGIN      = '{#';
+    public const string COMMENT_BEGIN_TRIM = '{#-';
+    public const string COMMENT_END        = '#}';
+    public const string COMMENT_END_TRIM   = '-#}';
 
-    public const OUTPUT_BEGIN      = '{{';
-    public const OUTPUT_BEGIN_TRIM = '{{-';
-    public const OUTPUT_END        = '}}';
-    public const OUTPUT_END_TRIM   = '-}}';
+    public const string OUTPUT_BEGIN      = '{{';
+    public const string OUTPUT_BEGIN_TRIM = '{{-';
+    public const string OUTPUT_END        = '}}';
+    public const string OUTPUT_END_TRIM   = '-}}';
 
-    public const RAW_BEGIN      = '{!';
-    public const RAW_BEGIN_TRIM = '{!-';
-    public const RAW_END        = '!}';
-    public const RAW_END_TRIM   = '-!}';
+    public const string RAW_BEGIN      = '{!';
+    public const string RAW_BEGIN_TRIM = '{!-';
+    public const string RAW_END        = '!}';
+    public const string RAW_END_TRIM   = '-!}';
 
-    public const POSITION_TEXT   = 0;
-    public const POSITION_BLOCK  = 1;
-    public const POSITION_OUTPUT = 2;
-    public const POSITION_RAW    = 3;
+    public const int POSITION_TEXT   = 0;
+    public const int POSITION_BLOCK  = 1;
+    public const int POSITION_OUTPUT = 2;
+    public const int POSITION_RAW    = 3;
 
-    public const REGEX_CONSTANT = '/true\b | false\b | null\b/Ax';
-    public const REGEX_NAME     = '/[a-zA-Z_][a-zA-Z0-9_]*/A';
-    public const REGEX_NUMBER   = '/[\-]?[0-9][0-9_]*(?:\.[0-9][0-9_]*)?/A';
-    public const REGEX_STRING   = '/(?:"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"|
+    public const string REGEX_CONSTANT = '/true\b | false\b | null\b/Ax';
+    public const string REGEX_NAME     = '/[a-zA-Z_][a-zA-Z0-9_]*/A';
+    public const string REGEX_NUMBER   = '/[\-]?[0-9][0-9_]*(?:\.[0-9][0-9_]*)?/A';
+    public const string REGEX_STRING   = '/(?:"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"|
         \'([^\'\\\\]*(?:\\\\.[^\'\\\\]*)*)\')/Axsmu';
-    public const REGEX_OPERATOR = '/and\b|xor\b|or\b|not\b|in\b|
+    public const string REGEX_OPERATOR = '/and\b|xor\b|or\b|not\b|in\b|
         =>|<>|<=?|>=?|[!=]==|[!=]?=|\.\.|[\[\]().,%*\/+|?:\-@~]/Ax';
 
     public function __construct($source)
@@ -78,7 +78,7 @@ final class Lexer
 
         do {
             $tokens[] = $token = $this->next();
-        } while ($token->getType() !== Token::EOF);
+        } while ($token->type !== Token::EOF);
 
         return new TokenStream($tokens);
     }

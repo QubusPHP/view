@@ -19,15 +19,13 @@
         }
     ],
     "require": {
-        "php": ">=8.2",
+        "php": ">=8.4",
         "qubus/security": "^3",
-        "qubus/support": "^3"
+        "qubus/support": "^4"
     },
     "require-dev": {
-        "mockery/mockery": "^1.3.1",
-        "pestphp/pest": "^1.21",
-        "phpunit/phpunit": "^9.0",
-        "qubus/qubus-coding-standard": "^1.1"
+        "mockery/mockery": "^1",
+        "qubus/qubus-coding-standard": "^2"
     },
     "autoload": {
         "psr-4": {

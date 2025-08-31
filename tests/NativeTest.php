@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Qubus\Tests\View;
 
 use PHPUnit\Framework\Assert;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Qubus\View\Native\Exception\FunctionDoesNotExistException;
 use Qubus\View\Native\Exception\InvalidTemplateNameException;
@@ -49,6 +50,10 @@ EOT;
         );
     }
 
+    /**
+     * @throws ViewException
+     * @throws InvalidTemplateNameException
+     */
     public function testUnregisteredNamespace()
     {
         $this->expectException(TemplateNotFoundException::class);
@@ -69,7 +74,7 @@ EOT;
         $engine->render('foo::bar');
     }
 
-    public function invalidTemplateNameProvider(): array
+    public static function invalidTemplateNameProvider(): array
     {
         return [
             [':bar'],
@@ -80,9 +85,9 @@ EOT;
     }
 
     /**
-     * @dataProvider invalidTemplateNameProvider
      * @throws ViewException
      */
+    #[DataProvider('invalidTemplateNameProvider')]
     public function testInvalidTemplateName($name)
     {
         $this->expectException(InvalidTemplateNameException::class);

@@ -6,6 +6,7 @@ namespace Qubus\Tests\View;
 
 use DirectoryIterator;
 use PHPUnit\Framework\Assert;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Qubus\View\Lexer;
 use Qubus\View\TokenStream;
@@ -16,7 +17,7 @@ use function realpath;
 
 class LexerTest extends TestCase
 {
-    public function tokenProvider(): array
+    public static function tokenProvider(): array
     {
         $paths = [];
 
@@ -34,9 +35,7 @@ class LexerTest extends TestCase
         return $paths;
     }
 
-    /**
-     * @dataProvider tokenProvider
-     */
+    #[DataProvider('tokenProvider')]
     public function testTokenizeReturnsTokenStream($actual, $expected)
     {
         $lexer = new Lexer(file_get_contents($actual));
@@ -45,6 +44,6 @@ class LexerTest extends TestCase
 
         Assert::assertTrue($tokenStream instanceof TokenStream);
 
-        Assert::assertEquals(include $expected, $tokenStream->getTokens());
+        Assert::assertEquals(include $expected, $tokenStream->tokens);
     }
 }

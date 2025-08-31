@@ -162,7 +162,7 @@ final class Helper
         } elseif (is_string($obj)) {
             return strlen($obj) === 0;
         } elseif ($obj instanceof Countable) {
-            return count($obj) ? false : true;
+            return !count($obj);
         } elseif ($obj instanceof Traversable) {
             return iterator_count($obj);
         } else {

@@ -20,11 +20,10 @@
     ],
     "require": {
         "php": ">=8.4",
-        "qubus/security": "^3",
+        "qubus/security": "^4",
         "qubus/support": "^4"
     },
     "require-dev": {
-        "mockery/mockery": "^1",
         "qubus/qubus-coding-standard": "^2"
     },
     "autoload": {

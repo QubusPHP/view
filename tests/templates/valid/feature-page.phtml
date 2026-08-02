@@ -1,0 +1,8 @@
+<?php $this->parent('test::feature-layout'); ?>
+<?php $this->block('content', function (): void { ?>
+    <?php $this->push('scripts', 'One,'); ?>
+    <?php $this->prepend('scripts', 'Before,'); ?>
+    <?php $this->component('test::feature-component', [], function (): void { ?>Slot,<?php }); ?>
+    <?php $this->block('missing', default: 'Fallback,'); ?>
+    <?php $this->push('scripts', 'After'); ?>
+<?php }); ?>

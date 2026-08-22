@@ -28,36 +28,37 @@ final class ForNode extends BaseNode
     {
         $compiler->addTraceInfo($this, $indent);
 
+        $iterator = $compiler->temporary('iterator');
+
         $compiler->pushContext('loop', $indent);
         if ($this->key) {
             $compiler->pushContext($this->key, $indent);
         }
         $compiler->pushContext($this->value, $indent);
 
+        $compiler->raw($iterator . ' = $this->iterate($context, ', $indent);
+        $this->seq->compile($compiler);
+        $compiler->raw(");\n");
+
         $else = false;
         if (null !== $this->else) {
-            $compiler->raw('if (Qubus\View\Helper::isIterable(', $indent);
-            $this->seq->compile($compiler);
-            $compiler->raw(') && !Qubus\View\Helper::isEmpty(');
-            $this->seq->compile($compiler);
-            $compiler->raw(")) {\n");
+            $compiler->raw('if (' . $iterator . '->length() > 0) {' . "\n", $indent);
             $else = true;
         }
 
         $compiler->raw(
-            'foreach (($context[\'loop\'] = $this->iterate($context, ',
+            'foreach (($context[\'loop\'] = ' . $iterator,
             $else ? $indent + 1 : $indent
         );
-        $this->seq->compile($compiler);
 
         if ($this->key) {
             $compiler->raw(
-                ')) as $context[\'' . $this->key
+                ') as $context[\'' . $this->key
                 . '\'] => $context[\'' . $this->value . '\']) {' . "\n"
             );
         } else {
             $compiler->raw(
-                ')) as $context[\'' . $this->value . '\']) {' . "\n"
+                ') as $context[\'' . $this->value . '\']) {' . "\n"
             );
         }
 

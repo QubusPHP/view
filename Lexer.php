@@ -124,6 +124,9 @@ final class Lexer
         }
     }
 
+    /**
+     * @throws SyntaxErrorException
+     */
     private function lexText(): array
     {
         $match = null;
@@ -201,6 +204,11 @@ final class Lexer
                     }
                     $this->cursor += strlen($match[0]);
                     $this->adjustLineChar($match[0]);
+                } else {
+                    throw new SyntaxErrorException(
+                        'unclosed comment',
+                        new Token(Token::TEXT, $token, $this->line, $this->char)
+                    );
                 }
                 break;
 

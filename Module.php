@@ -39,11 +39,7 @@ final class Module
     public function compile($compiler, $indent = 0): void
     {
         $compiler->raw("<?php\n");
-        $compiler->raw(
-            '// ' . $this->path . ' ' . gmdate('Y-m-d H:i:s T', time())
-            . "\n",
-            $indent
-        );
+        $compiler->raw('// Compiled by Scaffold ' . gmdate('Y-m-d H:i:s T', time()) . "\n", $indent);
         $compiler->raw("class $this->class extends \\Qubus\\View\\Template\n", $indent);
         $compiler->raw("{\n", $indent);
 
@@ -109,11 +105,17 @@ final class Module
         );
         $compiler->raw("{\n", $indent + 1);
 
+        $compiler->raw('$this->beginDisplay();' . "\n", $indent + 2);
+        $compiler->raw("try {\n", $indent + 2);
+
         // extends
         if ($this->extends) {
-            $this->extends->compile($compiler, $indent + 2);
+            $this->extends->compile($compiler, $indent + 3);
         }
-        $this->body->compile($compiler, $indent + 2);
+        $this->body->compile($compiler, $indent + 3);
+        $compiler->raw("} finally {\n", $indent + 2);
+        $compiler->raw('$this->endDisplay();' . "\n", $indent + 3);
+        $compiler->raw("}\n", $indent + 2);
         $compiler->raw("}\n", $indent + 1);
 
         foreach ($this->blocks as $block) {

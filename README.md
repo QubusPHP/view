@@ -15,7 +15,7 @@ composer require qubus/view
 
 ## More Info
 
-- [Documentation](https://codefyphp.com/docs/getting-started/basics/scaffold-templates/)
+- [Documentation](https://codefyphp.com/docs/getting-started/basics/views/)
 
 ## License
 

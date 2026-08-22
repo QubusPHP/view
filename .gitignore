@@ -1,3 +1,4 @@
+docs
 tests/templates/home.blade.php
 tests/templates/home.html
 tests/templates/layout.phtml
@@ -7,5 +8,6 @@ vendor
 .idea
 .phpcs-cache
 .phpunit.result.cache
+.phpunit.cache/
 composer.lock
 index.php

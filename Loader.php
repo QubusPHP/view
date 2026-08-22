@@ -9,26 +9,30 @@ use Qubus\Exception\Data\TypeException;
 use Qubus\View\Adapter\Adapter;
 use Qubus\View\Adapter\FileAdapter;
 use RuntimeException;
+use InvalidArgumentException;
+use Throwable;
 
 use function array_pop;
 use function explode;
 use function implode;
 use function md5;
 use function preg_replace;
+use function realpath;
 use function sprintf;
+use function str_contains;
+use function str_ends_with;
+use function str_starts_with;
 use function strtr;
 
 final class Loader implements Renderer
 {
-    public const string VERSION = '3.0.0';
+    public const string VERSION = '3.2.0';
     public const string CLASS_PREFIX = '__ScaffoldTemplate_';
     public const int RECOMPILE_NEVER = -1;
     public const int RECOMPILE_NORMAL = 0;
     public const int RECOMPILE_ALWAYS = 1;
 
     private bool $exceptionHandler = true;
-
-    private Adapter $target;
 
     /**
      * @var array
@@ -41,9 +45,6 @@ final class Loader implements Renderer
      */
     private array $cache = [];
 
-    /** @var string $extension */
-    private string $extension;
-
     public function __construct(array $options = [])
     {
         if (!isset($options['source'])) {
@@ -55,28 +56,58 @@ final class Loader implements Renderer
         }
 
         $target = $options['target'];
+        if (!is_string($target) || $target === '' || str_contains($target, "\0")) {
+            throw new InvalidArgumentException('target must be a non-empty directory path');
+        }
 
         $source = $options['source'];
         if ($source instanceof Closure) {
             $source = $source->__invoke();
         }
 
+        if ((!is_string($source) && !is_array($source)) || $source === [] || $source === '') {
+            throw new InvalidArgumentException('source must be a directory path or a non-empty array of paths');
+        }
+        foreach ((array) $source as $sourcePath) {
+            if (!is_string($sourcePath) || $sourcePath === '' || str_contains($sourcePath, "\0")) {
+                throw new InvalidArgumentException('source paths must be non-empty strings');
+            }
+        }
+
         $options += [
             'mode' => self::RECOMPILE_NORMAL,
             'mkdir' => 0777,
             'helpers' => [],
-            'extension' => '.html'
+            'extension' => '.html',
+            'exception_handler' => true,
         ];
+
+        $extension = ltrim(trim((string) $options['extension']), '.');
+        if (
+            $extension === ''
+            || str_contains($extension, "\0")
+            || str_contains($extension, '/')
+            || str_contains($extension, '\\')
+        ) {
+            throw new InvalidArgumentException('template extension must be a file extension, not a path');
+        }
+        $options['extension'] = $extension;
 
         if (!isset($options['adapter'])) {
             $options['adapter'] = new FileAdapter($source);
+        }
+        if (!$options['adapter'] instanceof Adapter) {
+            throw new InvalidArgumentException('adapter must implement ' . Adapter::class);
+        }
+        if (!is_array($options['helpers'])) {
+            throw new InvalidArgumentException('helpers must be an array of callables');
         }
 
         if (!is_dir($target)) {
             if ($options['mkdir'] === false) {
                 throw new RuntimeException(sprintf('target directory %s not found', $target));
             }
-            if (!mkdir($target, $options['mkdir'], true)) {
+            if (!mkdir($target, $options['mkdir'], true) && !is_dir($target)) {
                 throw new RuntimeException(sprintf('unable to create target directory %s', $target));
             }
         }
@@ -92,6 +123,7 @@ final class Loader implements Renderer
 
         $this->paths = [];
         $this->cache = [];
+        $this->exceptionHandler = (bool) $options['exception_handler'];
     }
 
     /**
@@ -124,7 +156,7 @@ final class Loader implements Renderer
      */
     private function getTemplateExtension(): string
     {
-        return '.' . ltrim($this->options['extension'], '.');
+        return '.' . $this->options['extension'];
     }
 
     /**
@@ -135,12 +167,20 @@ final class Loader implements Renderer
      */
     private function removeExtension(string $fileName): string
     {
-        return str_replace([
+        $extensions = [
             '.blade.php', '.blade.html', 'blade.htm', '.blade.tpl', '.pug', '.php', '.tpl', '.twig', '.blade',
             '.html', '.phtml', '.htm', '.templet.php', '.templet.html', '.templet.htm', '.templet.tpl', '.templet',
             '.template.php', '.template.html', '.template.htm', '.template.tpl', '.txt', '.txt',
             '.frame.php', '.frame.html', '.frame.htm', '.frame.tpl', '.frm', '.fr', '.fram',
-        ], '', $fileName);
+        ];
+
+        foreach ($extensions as $extension) {
+            if (str_ends_with($fileName, $extension)) {
+                return substr($fileName, 0, -strlen($extension));
+            }
+        }
+
+        return $fileName;
     }
 
     private function getClassName(string $path): string
@@ -150,6 +190,10 @@ final class Loader implements Renderer
 
     public function normalizePath(string $path): array
     {
+        if (str_contains($path, "\0")) {
+            throw new RuntimeException('template paths cannot contain null bytes');
+        }
+
         $path = preg_replace('#/{2,}#', '/', strtr($path, '\\', '/'));
         $parts = [];
         foreach (explode('/', $path) as $i => $part) {
@@ -162,7 +206,7 @@ final class Loader implements Renderer
                 } else {
                     array_pop($parts);
                 }
-            } elseif ($part !== '.') {
+            } elseif ($part !== '.' && ($part !== '' || $i === 0)) {
                 $parts[] = $part;
             }
         }
@@ -171,27 +215,65 @@ final class Loader implements Renderer
 
     public function resolvePath(string $template, string $from = ''): string
     {
+        if ($template === '' || str_contains($template, "\0")) {
+            throw new RuntimeException('template names must be non-empty and cannot contain null bytes');
+        }
+
+        $hadLeadingSlash = str_starts_with(strtr($template, '\\', '/'), '/');
+
         /** Remove the extension from the file. */
         $template = $this->removeExtension($template);
 
-        /** Replace the dot notation of directories and append file extension. */
-        $template = str_replace('.', DIRECTORY_SEPARATOR, $template) . $this->getTemplateExtension();
+        $templateParts = $this->normalizePath(strtr($template, '\\', '/'));
+        $template = implode('/', array_filter($templateParts, static fn ($part): bool => $part !== ''));
 
-        foreach ($this->options['source'] as $sourcePath) {
-            $source = implode('/', $this->normalizePath($sourcePath));
-            $file = $source . '/' . ltrim($template, '/');
-            if (is_file($file)) {
-                $parts = $this->normalizePath($source . '/' . dirname($from) . '/' . $template);
-                foreach ($this->normalizePath($source) as $i => $part) {
-                    if ($part !== $parts[$i]) {
-                        throw new RuntimeException(sprintf('%s is outside the source directory', $template));
-                    }
-                }
-                return $template;
+        /** Replace the dot notation of directories and append file extension. */
+        $template = str_replace('.', '/', $template) . $this->getTemplateExtension();
+        $template = ltrim($template, '/');
+
+        $candidates = [$template];
+        if ($from !== '') {
+            $relative = implode('/', $this->normalizePath(dirname($from) . '/' . $template));
+            if ($relative !== $template) {
+                $candidates[] = ltrim($relative, '/');
             }
         }
 
-        throw new RuntimeException(sprintf('Template %s not found.', $template));
+        $adapter = $this->getAdapter();
+        foreach ($candidates as $candidate) {
+            if ($adapter->isReadable($candidate)) {
+                $this->assertPathIsInsideSource($adapter, $candidate);
+                return $candidate;
+            }
+        }
+
+        throw new RuntimeException(sprintf(
+            'Template %s%s not found.',
+            $hadLeadingSlash ? '/' : '',
+            $template
+        ));
+    }
+
+    private function assertPathIsInsideSource(Adapter $adapter, string $path): void
+    {
+        if (!$adapter instanceof FileAdapter) {
+            return;
+        }
+
+        $resolved = realpath($adapter->getStreamUrl($path));
+        if ($resolved === false) {
+            throw new RuntimeException(sprintf('Template %s not found.', $path));
+        }
+
+        foreach ($this->options['source'] as $source) {
+            $root = realpath($source);
+            $sourcePrefix = $root === false ? null : rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+            if ($sourcePrefix !== null && str_starts_with($resolved, $sourcePrefix)) {
+                return;
+            }
+        }
+
+        throw new RuntimeException(sprintf('%s is outside the source directory', $path));
     }
 
     /**
@@ -248,11 +330,12 @@ final class Loader implements Renderer
 
         $adapter = $this->getAdapter();
 
-        if (isset($this->paths[$template . $from])) {
-            $path = $this->paths[$template . $from];
+        $pathKey = $template . "\0" . $from;
+        if (isset($this->paths[$pathKey])) {
+            $path = $this->paths[$pathKey];
         } else {
             $path = $this->resolvePath($template, $from);
-            $this->paths[$template . $from] = $path;
+            $this->paths[$pathKey] = $path;
         }
 
         $class = $this->getClassName($path);
@@ -284,6 +367,9 @@ final class Loader implements Renderer
         return $this->cache[$class] = new $class($this, $this->options['helpers']);
     }
 
+    /**
+     * @throws TypeException
+     */
     private function compileOrFail(Adapter $adapter, string $path, string $class, string $classFile): void
     {
         $target = new FileAdapter($this->options['target']);
@@ -292,7 +378,9 @@ final class Loader implements Renderer
             $parser = new Parser($lexer->tokenize());
             $compiler = new Compiler($parser->parse($path, $class));
             $compiled = $compiler->compile();
-            $target->putContents($classFile, $compiled);
+            if ($target->putContents($classFile, $compiled) === false) {
+                throw new RuntimeException(sprintf('unable to write compiled template %s', $classFile));
+            }
         } catch (SyntaxErrorException $e) {
             $e->setTemplateFile($path);
             $this->handleSyntaxError($e->setMessage($path . ': ' . $e->getMessage()));
@@ -323,7 +411,9 @@ final class Loader implements Renderer
             $parser = new Parser($lexer->tokenize());
             $compiler = new Compiler($parser->parse($path, $class));
             $compiled = $compiler->compile();
-            $target->putContents($classFile, $compiled);
+            if ($target->putContents($classFile, $compiled) === false) {
+                throw new RuntimeException(sprintf('unable to write compiled template %s', $classFile));
+            }
         } catch (SyntaxErrorException $e) {
             $e->setTemplateFile($path);
             $this->handleSyntaxError($e->setMessage($path . ': ' . $e->getMessage()));
@@ -350,6 +440,40 @@ final class Loader implements Renderer
     public function renderString($source, array $data = [])
     {
         return $this->loadFromString($source)->display($data);
+    }
+
+    /**
+     * Render a template and return its output instead of sending it to the output buffer.
+     *
+     * @param Template|string $template
+     * @param array $data
+     * @return string
+     * @throws TypeException
+     * @throws Throwable
+     */
+    public function fetch(Template|string $template, array $data = []): string
+    {
+        return $this->load($template)->render($data);
+    }
+
+    /**
+     * Compile a source string and return its rendered output.
+     *
+     * @throws TypeException
+     */
+    public function fetchString(string $source, array $data = []): string
+    {
+        return $this->loadFromString($source)->render($data);
+    }
+
+    public function exists(string $template, string $from = ''): bool
+    {
+        try {
+            $this->resolvePath($template, $from);
+            return true;
+        } catch (RuntimeException) {
+            return false;
+        }
     }
 
     public function getVersion(): string

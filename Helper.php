@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Qubus\View;
 
 use Countable;
+use InvalidArgumentException;
 use Qubus\View\Helper\Cycler;
+use Qubus\View\Helper\RangeIterator;
 use Traversable;
 
 use function abs;
@@ -97,7 +99,7 @@ final class Helper
 
     public static function date(mixed $obj = null, string $format = 'Y-m-d'): string
     {
-        return date($format, $obj ?: time());
+        return date($format, $obj === null ? time() : intval($obj));
     }
 
     public static function dump(mixed $obj = null): never
@@ -112,7 +114,41 @@ final class Helper
 
     public static function escape($obj = null, bool $force = false): string
     {
+        if ($obj instanceof HtmlString) {
+            return (string) $obj;
+        }
+
         return htmlspecialchars(strval($obj), ENT_QUOTES, 'UTF-8', $force);
+    }
+
+    public static function alpine(array $directives): HtmlString
+    {
+        return Alpine::attributes($directives);
+    }
+
+    public static function alpineData(mixed $state = []): HtmlString
+    {
+        return Alpine::data($state);
+    }
+
+    public static function alpineComponent(string $name, array $arguments = []): HtmlString
+    {
+        return Alpine::component($name, $arguments);
+    }
+
+    public static function alpineStore(string $name, mixed $state, ?string $nonce = null): HtmlString
+    {
+        return Alpine::store($name, $state, $nonce);
+    }
+
+    public static function alpineScript(string $source, ?string $nonce = null, array $attributes = []): HtmlString
+    {
+        return Alpine::script($source, $nonce, $attributes);
+    }
+
+    public static function alpineCloakStyle(?string $nonce = null): HtmlString
+    {
+        return Alpine::cloakStyle($nonce);
     }
 
     public static function first(mixed $obj = null, $default = null)
@@ -164,7 +200,7 @@ final class Helper
         } elseif ($obj instanceof Countable) {
             return !count($obj);
         } elseif ($obj instanceof Traversable) {
-            return iterator_count($obj);
+            return iterator_count($obj) === 0;
         } else {
             return false;
         }
@@ -287,6 +323,11 @@ final class Helper
         return str_repeat(strval($obj), $times);
     }
 
+    public static function range(float|int $lower, float|int $upper, float|int $step = 1): RangeIterator
+    {
+        return new RangeIterator($lower, $upper, $step);
+    }
+
     public static function replace(
         mixed $obj = null,
         array|string $search = '',
@@ -363,18 +404,26 @@ final class Helper
     public static function imageTag(mixed $obj, array $options = []): string
     {
         $attr = self::htmlAttribute(['alt','width','height','border'], $options);
-        return sprintf('<img src="%s" %s/>', $obj, $attr);
+        $attr = $attr === '' ? '' : ' ' . $attr;
+        return sprintf('<img src="%s"%s />', self::assetUrl($obj, true), $attr);
     }
 
     public static function cssTag(mixed $obj, array $options = []): string
     {
         $attr = self::htmlAttribute(['media'], $options);
-        return sprintf('<link rel="stylesheet" href="%s" type="text/css" %s />', $obj, $attr);
+        $attr = $attr === '' ? '' : ' ' . $attr;
+        return sprintf('<link rel="stylesheet" href="%s" type="text/css"%s />', self::assetUrl($obj), $attr);
     }
 
     public static function scriptTag(mixed $obj, array $options = []): string
     {
-        return sprintf('<script src="%s" type="text/javascript"></script>', $obj);
+        $attr = self::htmlAttribute(
+            ['async', 'crossorigin', 'defer', 'integrity', 'nonce', 'referrerpolicy', 'type'],
+            $options
+        );
+        $attr = $attr === '' ? '' : ' ' . $attr;
+        $type = isset($options['type']) ? '' : ' type="text/javascript"';
+        return sprintf('<script src="%s"%s%s></script>', self::assetUrl($obj), $type, $attr);
     }
 
     protected static function htmlAttribute(array $attrs = [], array $data = []): string
@@ -383,7 +432,12 @@ final class Helper
 
         $result = [];
         foreach ($attrs as $name => $value) {
-            $result[] = "{$name}=\"{$value}\"";
+            if ($value === false || $value === null) {
+                continue;
+            }
+            $result[] = $value === true
+            ? $name
+            : $name . '="' . self::escape($value, true) . '"';
         }
         return implode(' ', $result);
     }
@@ -400,5 +454,21 @@ final class Helper
             }
         }
         return $result;
+    }
+
+    private static function assetUrl(mixed $value, bool $allowDataImage = false): string
+    {
+        $value = trim(strval($value));
+        $hasUnsafeControl = preg_match('/[\x00-\x1F\x7F]/', $value);
+        $hasScheme = preg_match('/^[a-z][a-z0-9+.-]*:/i', $value);
+        $isWebUrl = preg_match('/^https?:/i', $value);
+        $isDataImage = $allowDataImage
+        && preg_match('#^data:image/(?:avif|gif|jpeg|png|webp);base64,#i', $value);
+
+        if ($value === '' || $hasUnsafeControl || ($hasScheme && !$isWebUrl && !$isDataImage)) {
+            throw new InvalidArgumentException('Asset URLs must be relative, HTTP, HTTPS, or a supported data image.');
+        }
+
+        return self::escape($value, true);
     }
 }

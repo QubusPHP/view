@@ -10,6 +10,7 @@ use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\TestCase;
 use Qubus\View\Helper;
 use stdClass;
+use InvalidArgumentException;
 
 use function date;
 use function in_array;
@@ -48,18 +49,43 @@ class HelperTest extends TestCase
         Assert::assertTrue(in_array($cycler->random(), $elements));
     }
 
+    public function testEmptyCycleIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        Helper::cycle([]);
+    }
+
     public function testDate()
     {
         $time = time();
         $now = date('Y-m-d', $time);
         Assert::assertEquals($now, Helper::date());
         Assert::assertEquals($now, Helper::date($time));
+        Assert::assertEquals(date('Y-m-d', 0), Helper::date(0));
     }
 
     public function testEscape()
     {
         $var = '<p data-info="foo&bar">foobar</p>';
         Assert::assertEquals('&lt;p data-info=&quot;foo&amp;bar&quot;&gt;foobar&lt;/p&gt;', Helper::escape($var));
+    }
+
+    public function testHtmlTagHelpersEscapeAttributeValues(): void
+    {
+        Assert::assertSame(
+            '<img src="x&quot; onerror=&quot;alert(1)" alt="&quot; autofocus onfocus=&quot;attack" />',
+            Helper::imageTag('x" onerror="alert(1)', ['alt' => '" autofocus onfocus="attack'])
+        );
+        Assert::assertSame(
+            '<script src="app.js&quot; nonce=&quot;attack" type="text/javascript"></script>',
+            Helper::scriptTag('app.js" nonce="attack')
+        );
+    }
+
+    public function testScriptTagRejectsExecutableUrlSchemes(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        Helper::scriptTag('javascript:alert(1)');
     }
 
     public function testFirst()

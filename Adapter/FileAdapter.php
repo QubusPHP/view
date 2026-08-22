@@ -11,7 +11,15 @@ use function file_put_contents;
 use function filemtime;
 use function is_readable;
 use function realpath;
+use function rename;
 use function sprintf;
+use function tempnam;
+use function unlink;
+use function dirname;
+use function chmod;
+use function umask;
+
+use const LOCK_EX;
 
 final class FileAdapter implements Adapter
 {
@@ -55,7 +63,24 @@ final class FileAdapter implements Adapter
 
     public function putContents(string $path, string $contents): int|bool
     {
-        return file_put_contents($this->getStreamUrl($path), $contents);
+        $destination = $this->getStreamUrl($path);
+        $temporary = tempnam(dirname($destination), '.scaffold-');
+        if ($temporary === false) {
+            return false;
+        }
+
+        $written = file_put_contents($temporary, $contents, LOCK_EX);
+        if ($written !== false) {
+            chmod($temporary, 0666 & ~umask());
+        }
+        if ($written === false || !rename($temporary, $destination)) {
+            if (is_file($temporary)) {
+                unlink($temporary);
+            }
+            return false;
+        }
+
+        return $written;
     }
 
     public function getStreamUrl(string $path): string

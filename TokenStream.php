@@ -55,8 +55,8 @@ final class TokenStream
     {
         $t--;
         $length = count($this->tokens);
-        if ($this->cursor + $t > $length) {
-            $t = 0;
+        if ($this->cursor + $t >= $length) {
+            return $this->tokens[$length - 1];
         }
         if ($this->cursor + $t < 0) {
             $t = -$this->cursor;

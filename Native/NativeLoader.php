@@ -6,6 +6,7 @@ namespace Qubus\View\Native;
 
 use LogicException;
 use InvalidArgumentException;
+use Qubus\View\Alpine;
 use Qubus\View\Native\Exception\FunctionDoesNotExistException;
 use Qubus\View\Native\Exception\InvalidTemplateNameException;
 use Qubus\View\Native\Exception\TemplateNotFoundException;
@@ -78,6 +79,12 @@ final class NativeLoader implements TemplateEngine
             'ucwords' => ucwords(...),
             'sprintf' => sprintf(...),
             'wordwrap' => wordwrap(...),
+            'alpine' => Alpine::attributes(...),
+            'alpineData' => Alpine::data(...),
+            'alpineComponent' => Alpine::component(...),
+            'alpineStore' => Alpine::store(...),
+            'alpineScript' => Alpine::script(...),
+            'alpineCloakStyle' => Alpine::cloakStyle(...),
         ], $functions);
     }
 

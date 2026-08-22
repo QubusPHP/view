@@ -856,25 +856,13 @@ final class Parser
     private function parseAddExpression(): BaseExpression
     {
         $line = $this->stream->currentToken->line;
-        $left = $this->parseSubExpression();
-        while ($this->stream->consume(Token::OPERATOR, '+')) {
-            $right = $this->parseSubExpression();
-            $left = new AddExpression($left, $right, $line);
-            $line = $this->stream->currentToken->line;
-        }
-        return $left;
-    }
-
-    /**
-     * @throws SyntaxErrorException
-     */
-    private function parseSubExpression(): BaseExpression
-    {
-        $line = $this->stream->currentToken->line;
         $left = $this->parseMulExpression();
-        while ($this->stream->consume(Token::OPERATOR, '-')) {
+        while ($this->stream->test(Token::OPERATOR, ['+', '-'])) {
+            $operator = $this->stream->next()->value;
             $right = $this->parseMulExpression();
-            $left = new SubExpression($left, $right, $line);
+            $left = $operator === '+'
+            ? new AddExpression($left, $right, $line)
+            : new SubExpression($left, $right, $line);
             $line = $this->stream->currentToken->line;
         }
         return $left;
@@ -886,40 +874,15 @@ final class Parser
     private function parseMulExpression(): BaseExpression
     {
         $line = $this->stream->currentToken->line;
-        $left = $this->parseDivExpression();
-        while ($this->stream->consume(Token::OPERATOR, '*')) {
-            $right = $this->parseDivExpression();
-            $left = new MulExpression($left, $right, $line);
-            $line = $this->stream->currentToken->line;
-        }
-        return $left;
-    }
-
-    /**
-     * @throws SyntaxErrorException
-     */
-    private function parseDivExpression(): BaseExpression
-    {
-        $line = $this->stream->currentToken->line;
-        $left = $this->parseModExpression();
-        while ($this->stream->consume(Token::OPERATOR, '/')) {
-            $right = $this->parseModExpression();
-            $left = new DivExpression($left, $right, $line);
-            $line = $this->stream->currentToken->line;
-        }
-        return $left;
-    }
-
-    /**
-     * @throws SyntaxErrorException
-     */
-    private function parseModExpression(): BaseExpression
-    {
-        $line = $this->stream->currentToken->line;
         $left = $this->parseUnaryExpression();
-        while ($this->stream->consume(Token::OPERATOR, '%')) {
+        while ($this->stream->test(Token::OPERATOR, ['*', '/', '%'])) {
+            $operator = $this->stream->next()->value;
             $right = $this->parseUnaryExpression();
-            $left = new ModExpression($left, $right, $line);
+            $left = match ($operator) {
+                '*' => new MulExpression($left, $right, $line),
+                '/' => new DivExpression($left, $right, $line),
+                '%' => new ModExpression($left, $right, $line),
+            };
             $line = $this->stream->currentToken->line;
         }
         return $left;

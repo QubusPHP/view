@@ -15,6 +15,7 @@ final class Compiler
     private Module $module;
     private int $line;
     private array $trace;
+    private int $temporary;
 
     public function __construct(Module $module)
     {
@@ -22,6 +23,7 @@ final class Compiler
         $this->module = $module;
         $this->line   = 1;
         $this->trace  = [];
+        $this->temporary = 0;
     }
 
     private function write($string): Compiler
@@ -86,5 +88,10 @@ final class Compiler
             );
         }
         return $this->trace;
+    }
+
+    public function temporary(string $prefix = 'value'): string
+    {
+        return '$__scaffold_' . $prefix . '_' . $this->temporary++;
     }
 }

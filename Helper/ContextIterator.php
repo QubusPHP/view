@@ -11,7 +11,7 @@ use Traversable;
 
 use function count;
 use function is_array;
-use function iterator_count;
+use function iterator_to_array;
 
 final class ContextIterator implements Iterator
 {
@@ -26,9 +26,14 @@ final class ContextIterator implements Iterator
     public function __construct($sequence, $parent)
     {
         if ($sequence instanceof Traversable) {
-            $this->length = $sequence instanceof Countable ?
-            count($sequence) : iterator_count($sequence);
-            $this->sequence = $sequence;
+            if ($sequence instanceof Countable) {
+                $this->length = count($sequence);
+                $this->sequence = $sequence;
+            } else {
+                $values = iterator_to_array($sequence, true);
+                $this->length = count($values);
+                $this->sequence = new ArrayIterator($values);
+            }
         } elseif (is_array($sequence)) {
             $this->length = count($sequence);
             $this->sequence = new ArrayIterator($sequence);
@@ -72,5 +77,35 @@ final class ContextIterator implements Iterator
     public function current(): mixed
     {
         return $this->sequence->current();
+    }
+
+    public function index(): int
+    {
+        return $this->index;
+    }
+
+    public function count(): int
+    {
+        return $this->count;
+    }
+
+    public function first(): bool
+    {
+        return $this->first;
+    }
+
+    public function last(): bool
+    {
+        return $this->last;
+    }
+
+    public function length(): int
+    {
+        return $this->length ?? 0;
+    }
+
+    public function parent(): mixed
+    {
+        return $this->parent;
     }
 }

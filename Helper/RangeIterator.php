@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Qubus\View\Helper;
 
+use Countable;
+use InvalidArgumentException;
 use Iterator;
 use ReturnTypeWillChange;
 
@@ -11,7 +13,7 @@ use function abs;
 use function mt_rand;
 use function mt_srand;
 
-final class RangeIterator implements Iterator
+final class RangeIterator implements Countable, Iterator
 {
     private float|int $lower;
     private float|int $upper;
@@ -20,14 +22,23 @@ final class RangeIterator implements Iterator
 
     public function __construct(float|int $lower, float|int $upper, float|int $step = 1)
     {
+        if ($step == 0) {
+            throw new InvalidArgumentException('Range step must not be zero.');
+        }
+
         $this->lower = $lower;
         $this->upper = $upper;
-        $this->step = $step;
+        $this->step = abs($step);
     }
 
     public function length(): float|int
     {
-        return abs($this->upper - $this->lower) / abs($this->step);
+        return (int) (abs($this->upper - $this->lower) / $this->step) + 1;
+    }
+
+    public function count(): int
+    {
+        return (int) $this->length();
     }
 
     public function includes($n): bool
@@ -55,7 +66,7 @@ final class RangeIterator implements Iterator
         $this->current = $this->lower;
     }
 
-    public function key(): int
+    public function key(): int|float
     {
         return $this->current;
     }
@@ -74,7 +85,7 @@ final class RangeIterator implements Iterator
     #[ReturnTypeWillChange]
     public function next(): RangeIterator
     {
-        $this->current += $this->step;
+        $this->current += $this->upper >= $this->lower ? $this->step : -$this->step;
         return $this;
     }
 

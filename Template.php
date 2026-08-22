@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Qubus\View;
 
 use Closure;
-use Qubus\Exception\Exception;
 use Qubus\View\Helper\ContextIterator;
 use RuntimeException;
+use Throwable;
 
 use function array_key_exists;
 use function array_keys;
@@ -62,6 +62,8 @@ abstract class Template
     /** @var array $stack */
     protected array $stack;
 
+    private bool $displaying = false;
+
     public function __construct(Loader $loader, array $helpers = [])
     {
         $this->loader  = $loader;
@@ -73,8 +75,12 @@ abstract class Template
         $this->stack   = [];
     }
 
-    private function getPath($template)
+    private function getPath($template): string
     {
+        if (!is_string($template) || $template === '') {
+            throw new RuntimeException('template names must be non-empty strings');
+        }
+
         if ($template[0] !== '/') {
             return dirname(static::SCAFFOLD_NAME) . '/' . $template;
         } else {
@@ -86,14 +92,14 @@ abstract class Template
     {
         try {
             return $this->loader->load($this->getPath($template));
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             throw new RuntimeException(sprintf(
                 'error extending %s (%s) from %s line %d',
                 var_export($template, true),
                 $e->getMessage(),
                 static::SCAFFOLD_NAME,
                 $this->getLineTrace($e)
-            ));
+            ), 0, $e);
         }
     }
 
@@ -101,14 +107,14 @@ abstract class Template
     {
         try {
             return $this->loader->load($this->getPath($template));
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             throw new RuntimeException(sprintf(
                 'error including %s (%s) from %s line %d',
                 var_export($template, true),
                 $e->getMessage(),
                 static::SCAFFOLD_NAME,
                 $this->getLineTrace($e)
-            ));
+            ), 0, $e);
         }
     }
 
@@ -116,14 +122,14 @@ abstract class Template
     {
         try {
             return $this->loader->load($this->getPath($template))->macros;
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             throw new RuntimeException(sprintf(
                 'error importing %s (%s) from %s line %d',
                 var_export($template, true),
                 $e->getMessage(),
                 static::SCAFFOLD_NAME,
                 $this->getLineTrace($e)
-            ));
+            ), 0, $e);
         }
     }
 
@@ -180,22 +186,30 @@ abstract class Template
         if (! array_key_exists($name, $this->stack)) {
             $this->stack[$name] = [];
         }
-        $this->stack[$name][] = $context[$name] ?? null;
+        $this->stack[$name][] = [
+            'exists' => array_key_exists($name, $context),
+            'value' => $context[$name] ?? null,
+        ];
         return $this;
     }
 
     public function popContext(&$context, $name): static
     {
         if (! empty($this->stack[$name])) {
-            $context[$name] = array_pop($this->stack[$name]);
+            $previous = array_pop($this->stack[$name]);
+            if ($previous['exists']) {
+                $context[$name] = $previous['value'];
+            } else {
+                unset($context[$name]);
+            }
         }
         return $this;
     }
 
-    public function getLineTrace(?Exception $e = null)
+    public function getLineTrace(?Throwable $e = null)
     {
         if (! isset($e)) {
-            $e = new Exception();
+            $e = new RuntimeException();
         }
 
         $lines = static::$lines;
@@ -226,14 +240,16 @@ abstract class Template
             } elseif (is_callable($helper)) {
                 return call_user_func_array($helper, $args);
             }
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             throw new RuntimeException(
                 sprintf(
                     '%s in %s line %d',
                     $e->getMessage(),
                     static::SCAFFOLD_NAME,
                     $this->getLineTrace($e)
-                )
+                ),
+                0,
+                $e
             );
         }
 
@@ -259,10 +275,36 @@ abstract class Template
         $blocks = [],
         $macros = [],
         $imports = []
-    ): bool|string {
+    ): string {
+        $level = ob_get_level();
         ob_start();
-        $this->display($context, $blocks, $macros);
-        return ob_get_clean();
+        try {
+            $this->display($context, $blocks, $macros, $imports);
+            return (string) ob_get_clean();
+        } catch (Throwable $e) {
+            while (ob_get_level() > $level) {
+                ob_end_clean();
+            }
+            throw $e;
+        }
+    }
+
+    /** @internal Used by generated templates to reject include/extends cycles. */
+    public function beginDisplay(): void
+    {
+        if ($this->displaying) {
+            throw new RuntimeException(sprintf(
+                'circular template reference detected while rendering %s',
+                static::SCAFFOLD_NAME
+            ));
+        }
+        $this->displaying = true;
+    }
+
+    /** @internal Used by generated templates. */
+    public function endDisplay(): void
+    {
+        $this->displaying = false;
     }
 
     public function iterate($context, $seq): ContextIterator

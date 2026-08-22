@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Qubus\View\Helper;
 
 use ArrayIterator;
+use InvalidArgumentException;
 use IteratorAggregate;
 
 use function ceil;
@@ -20,6 +21,10 @@ final class Cycler implements IteratorAggregate
 
     public function __construct(array $elements)
     {
+        if ($elements === []) {
+            throw new InvalidArgumentException('A cycler requires at least one element.');
+        }
+
         $this->elements = $elements;
         $this->length = count($this->elements);
         $this->idx = 0;
